@@ -198,6 +198,31 @@
   .login-box .sub{font-size:13px; color:#6b7a90; margin-bottom:18px;}
   .login-box input{width:100%; margin-bottom:10px;}
   .login-error{color:var(--emergency); font-size:12.5px; margin-top:6px;}
+
+  /* Заставка (splash) между входом и панелью — чёрный градиент (в тон
+     иконке админ-приложения, у неё чёрный фон, а не навy как у пациента).
+     См. showSplash(). */
+  .splash-screen{position:fixed; inset:0; z-index:210; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:18px;
+    background:linear-gradient(180deg, #1a1a1a 0%, #000 100%);
+    opacity:1; transition:opacity .45s ease; pointer-events:none;}
+  .splash-screen.hide{opacity:0;}
+  .splash-screen[hidden]{display:none;}
+  .splash-heart{width:110px; height:110px; filter:drop-shadow(0 6px 18px rgba(0,0,0,.4));}
+  .splash-heart-shape{opacity:0; transform-origin:50px 50px; animation:splashHeartIn .55s ease-out forwards;}
+  .splash-pulse-line{stroke-dasharray:220; stroke-dashoffset:220; animation:splashPulseDraw .8s .35s ease-out forwards;}
+  .splash-title{color:#fff; font-size:16.5px; font-weight:700; letter-spacing:.02em;
+    opacity:0; animation:splashTitleIn .5s .75s ease-out forwards;}
+  @keyframes splashHeartIn{
+    0%{opacity:0; transform:scale(.75);}
+    70%{opacity:1; transform:scale(1.06);}
+    100%{opacity:1; transform:scale(1);}
+  }
+  @keyframes splashPulseDraw{ to{stroke-dashoffset:0;} }
+  @keyframes splashTitleIn{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);} }
+  @media (prefers-reduced-motion: reduce){
+    .splash-heart-shape, .splash-pulse-line, .splash-title{animation:none; opacity:1; stroke-dashoffset:0; transform:none;}
+  }
 </style>
 </head>
 <body>
@@ -212,6 +237,18 @@
     <div class="login-error" id="loginError"></div>
     <button class="btn" id="loginSubmit" style="width:100%; margin-top:6px;">Войти</button>
   </div>
+</div>
+
+<!-- Заставка после успешного входа — см. showSplash(), вызывается только
+     из submitLogin() (реальный вход), не из авто-возобновления сессии
+     на старте (см. init внизу файла) — иначе мигала бы при каждом
+     обновлении страницы у уже вошедшего администратора. -->
+<div class="splash-screen" id="splashScreen" hidden>
+  <svg class="splash-heart" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path class="splash-heart-shape" d="M50 88 C20 66 6 46 6 29 C6 15 17 6 29 6 C38 6 46 11 50 20 C54 11 62 6 71 6 C83 6 94 15 94 29 C94 46 80 66 50 88 Z" fill="#fff"/>
+    <path class="splash-pulse-line" d="M10 50 H36 L42 34 L50 62 L57 44 L61 50 H90" stroke="#B0454B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </svg>
+  <div class="splash-title">Кардиореабилитация</div>
 </div>
 
 <div id="app" style="display:none;">
@@ -367,6 +404,18 @@ function showApp(){
   get("loginScreen").style.display = "none";
   get("app").style.display = "flex";
 }
+function showSplash(){
+  const splash = get("splashScreen");
+  if(!splash) return;
+  const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  splash.hidden = false;
+  splash.classList.remove("hide");
+  const duration = reduced ? 500 : 1500;
+  setTimeout(()=>{
+    splash.classList.add("hide");
+    setTimeout(()=>{ splash.hidden = true; }, 460);
+  }, duration);
+}
 function showLogin(){
   get("loginScreen").style.display = "flex";
   get("app").style.display = "none";
@@ -397,6 +446,7 @@ async function submitLogin(){
     get("loginPassword").value = "";
     err.textContent = "";
     showApp();
+    showSplash();
     startApp();
   }catch(e){
     err.textContent = e.message;
